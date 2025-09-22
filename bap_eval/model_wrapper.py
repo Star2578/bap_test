@@ -1,3 +1,6 @@
+import os
+
+
 class BaseModelWrapper:
     """
     Abstract base class for all model wrappers.
@@ -53,12 +56,13 @@ class OpenAIModelWrapper(BaseModelWrapper):
 
     Args:
         model_name (str): OpenAI model name (e.g., "gpt-4.1").
+        api_key (str): API key for your model.
     """
 
-    def __init__(self, model_name: str):
+    def __init__(self, model_name: str, api_key: str = None):
         import openai
         self.model_name = model_name
-        self.client = openai.OpenAI()
+        self.client = openai.OpenAI(api_key=api_key or os.environ.get("OPENAI_API_KEY"))
 
     def generate(self, prompt: str) -> str:
         """
@@ -83,10 +87,12 @@ class OllamaModelWrapper(BaseModelWrapper):
 
     Args:
         model_name (str): Ollama model name (e.g., "llama3").
+        base_url (str, optional): Base URL for the Ollama API. Defaults to "http://localhost:11434".
     """
 
-    def __init__(self, model_name: str):
+    def __init__(self, model_name: str, base_url="http://localhost:11434"):
         self.model_name = model_name
+        self.base_url = base_url
 
     def generate(self, prompt: str) -> str:
         """
@@ -98,10 +104,10 @@ class OllamaModelWrapper(BaseModelWrapper):
         Returns:
             str: Model-generated response.
         """
-        import subprocess
-        result = subprocess.run(
-            ["ollama", "run", self.model_name],
-            input=prompt.encode(),
-            capture_output=True
+        import requests
+        response = requests.post(
+            f"{self.base_url}/api/generate",
+            json={"model": self.model_name, "prompt": prompt, "stream": False}
         )
-        return result.stdout.decode()
+        response.raise_for_status()
+        return response.json()["response"]
