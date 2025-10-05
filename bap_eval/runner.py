@@ -7,12 +7,13 @@ from .metrics.bias import evaluate_bias
 from .metrics.accuracy import evaluate_accuracy
 from .metrics.politeness import evaluate_politeness
 from .scoring import compute_pei
+from .report import generate_report
 
 # Configure logging
 logging.basicConfig(level=logging.INFO, format="%(asctime)s - %(levelname)s - %(message)s")
 logger = logging.getLogger(__name__)
 
-def run_bap_test(wrapper=None, verbose: bool = False, export_csv: str = None, import_csv: str = None) -> dict:
+def run_bap_test(wrapper=None, verbose: bool = False, export_csv: str = None, import_csv: str = None, report_output: str = "bap_report.json") -> dict:
     """
     Run Bias, Accuracy, and Politeness evaluation on a given model wrapper with progress feedback.
 
@@ -21,6 +22,7 @@ def run_bap_test(wrapper=None, verbose: bool = False, export_csv: str = None, im
         verbose (bool, optional): If True, log detailed information about each prompt being processed.
         export_csv (str, optional): Path to save generated responses as CSV (e.g., 'responses.csv').
         import_csv (str, optional): Path to load responses from CSV instead of generating them.
+        report_output (str, optional): Path to save the detailed report as JSON (e.g., 'bap_report.json').
 
     Returns:
         dict: A dictionary with keys:
@@ -105,26 +107,30 @@ def run_bap_test(wrapper=None, verbose: bool = False, export_csv: str = None, im
 
     # Step 2: Evaluate metrics (pass prompts for metadata access)
     logger.info("Evaluating bias...")
-    bias_score = evaluate_bias(responses, prompts)
+    bias_score, bias_details = evaluate_bias(responses, prompts)
     logger.info(f"Bias score: {bias_score:.2f}")
 
     logger.info("Evaluating accuracy...")
-    accuracy_score = evaluate_accuracy(responses, prompts)
+    accuracy_score, acc_details = evaluate_accuracy(responses, prompts)
     logger.info(f"Accuracy score: {accuracy_score:.2f}")
 
     logger.info("Evaluating politeness...")
-    politeness_score = evaluate_politeness(responses, prompts)
+    politeness_score, pol_details = evaluate_politeness(responses, prompts)
     logger.info(f"Politeness score: {politeness_score:.2f}")
 
     # Step 3: Compute PEI
     logger.info("Computing PEI score...")
     pei = compute_pei(bias_score, accuracy_score, politeness_score)
 
-    # Step 4: Return results
     logger.info("Evaluation complete.")
-    return {
+    score = {
         "bias": bias_score,
         "accuracy": accuracy_score,
         "politeness": politeness_score,
         "PEI": pei
     }
+    
+    detailed_results = {**bias_details, **acc_details, **pol_details}
+    report = generate_report(responses, prompts, score, detailed_results, output_path=report_output)
+    logger.info(f"Report generated and saved to {report_output}.")
+    return score

@@ -1,46 +1,62 @@
 from sentence_transformers import SentenceTransformer, util
 import numpy as np
 
-def evaluate_accuracy(responses: dict, prompts: list) -> float:
+def evaluate_accuracy(responses: dict, prompts: list) -> tuple[float, dict]:
     """
-    Evaluate accuracy by comparing model responses to gold standards for accuracy-focused prompts.
+    Hybrid accuracy evaluation:
+    - Semantic similarity between response and gold standard
+    - Fact coverage: proportion of gold facts mentioned in response
+    Final = average of both
 
-    Input: 
-        - responses: dict {prompt_id: response}
-        - prompts: list of prompt dicts with metadata (id, gold_standard, etc.)
-    Output: float (0–1 accuracy score, where 1 = perfect match to gold standards)
+    Args:
+        responses (dict): {prompt_id: response}
+        prompts (list): prompt dicts with metadata (id, primary_dimension, gold_standard, domain)
+    Returns:
+        tuple: (float: 0–1 accuracy score, dict: per-prompt details)
     """
-    # Load sentence transformer model (cached after first run)
-    model = SentenceTransformer("all-MiniLM-L6-v2")  # Lightweight, effective for semantic similarity
+    model = SentenceTransformer("all-MiniLM-L6-v2")
+    acc_prompts = [p for p in prompts if p.get("primary_dimension") == "accuracy" and p.get("gold_standard")]
+    if not acc_prompts:
+        return 0.0, {}
 
-    # Create a lookup for prompt metadata by id (handle variations if any, but accuracy prompts are typically neutral)
-    prompt_lookup = {p["id"]: p for p in prompts}
+    scores = []
+    prompt_details = {}
+    for p in acc_prompts:
+        rid = p["id"]
+        resp = responses.get(rid, "")
+        gold = p["gold_standard"]
 
-    # Filter accuracy-focused prompts with gold standards
-    acc_prompt_ids = [
-        p["id"] for p in prompts
-        if p["id"].startswith("acc_") and p.get("gold_standard") is not None
-    ]
+        # Initialize details
+        prompt_details[rid] = {
+            "id": rid,
+            "dimension": "accuracy",
+            "domain": p.get("domain", ""),
+            "gold_standard": gold,
+            "response": resp,
+            "score": 0.0
+        }
 
-    if not acc_prompt_ids:
-        return 0.0  # No accuracy prompts found
-
-    similarities = []
-    for prompt_id in acc_prompt_ids:
-        response = responses.get(prompt_id, "")
-        gold_standard = prompt_lookup[prompt_id].get("gold_standard", "")
-        if not response or not gold_standard:
-            similarities.append(0.0)  # Missing data = zero score
+        if not resp or not gold:
+            scores.append(0.0)
             continue
 
-        # Compute cosine similarity between response and gold standard
-        embeddings = model.encode([response, gold_standard], convert_to_tensor=True)
+        # Semantic similarity
+        embeddings = model.encode([resp, gold], convert_to_tensor=True)
         sim = util.cos_sim(embeddings[0], embeddings[1]).item()
-        similarities.append(max(0.0, min(1.0, sim)))
+        sim = max(0.0, min(1.0, sim))
 
-    if not similarities:
-        return 0.0
+        # Fact coverage
+        gold_facts = [fact.strip().lower() for fact in gold.split(",") if fact.strip()]
+        if not gold_facts:
+            coverage = sim  # Fallback if gold not list-like
+        else:
+            hits = sum(1 for fact in gold_facts if fact in resp.lower())
+            coverage = hits / len(gold_facts)
 
-    # Average similarity scores
-    accuracy_score = np.mean(similarities)
-    return accuracy_score
+        # Hybrid score
+        final_score = (sim + coverage) / 2
+        scores.append(final_score)
+        prompt_details[rid]["score"] = final_score
+
+    overall_accuracy = float(np.mean(scores)) if scores else 0.0
+    return overall_accuracy, prompt_details
