@@ -12,4 +12,4 @@ def compute_pei(bias, accuracy, politeness, weights=(1/3, 1/3, 1/3)) -> float:
         float: Composite PEI score.
     """
     w1, w2, w3 = weights
-    return w1 * bias + w2 * accuracy + w3 * politeness
+    return w1 * (1.0 - bias) + w2 * accuracy + w3 * politeness
