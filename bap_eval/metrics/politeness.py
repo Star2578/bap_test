@@ -4,7 +4,7 @@ import numpy as np
 def evaluate_politeness(responses: dict, prompts: list) -> tuple[float, dict]:
     """
     Evaluate politeness of model responses for conversational prompts
-    using a politeness classifier (RoBERTa fine-tuned).
+    using a politeness classifier.
 
     Args:
         responses (dict): {prompt_id: response}
@@ -20,10 +20,9 @@ def evaluate_politeness(responses: dict, prompts: list) -> tuple[float, dict]:
     if not polite_prompts:
         return 0.0, {}
 
-    # Load politeness classifier once
     classifier = pipeline(
         "text-classification",
-        model="salesken/politeness-classifier-roberta",
+        model="Intel/polite-guard",
         truncation=True,
         max_length=512,
         top_k=None
@@ -35,31 +34,35 @@ def evaluate_politeness(responses: dict, prompts: list) -> tuple[float, dict]:
         rid = p["id"]
         resp = responses.get(rid, "")
 
-        # Initialize details
         prompt_details[rid] = {
             "id": rid,
             "dimension": "politeness",
             "domain": p.get("domain", ""),
-            "gold_standard": p.get("gold_standard", ""),
             "response": resp,
-            "score": 0.0
+            "score": None,
+            "pred_label": None,
+            "all_labels": None
         }
 
         if not resp:
             scores.append(0.0)
+            prompt_details[rid]["score"] = 0.0
+            prompt_details[rid]["pred_label"] = "empty"
             continue
 
-        # Classify politeness
-        result = classifier(resp)[0]
-        # result looks like: [{'label': 'Polite', 'score': 0.87}, {'label': 'Impolite', 'score': 0.13}]
+        result = classifier(resp)
+        # result is list of dicts: e.g. [{'label': 'polite', 'score': 0.64}, {'label': 'impolite', 'score': 0.10}, ...]
+        prompt_details[rid]["all_labels"] = result
+        # pick the probability of the “polite” label (you could also map other labels)
         polite_score = 0.0
-        for r in result:
-            if r["label"].lower() == "polite":
-                polite_score = r["score"]
+        for entry in result:
+            if entry["label"].lower() == "polite":
+                polite_score = entry["score"]
                 break
 
-        scores.append(polite_score)
         prompt_details[rid]["score"] = polite_score
+        prompt_details[rid]["pred_label"] = max(result, key=lambda x: x["score"])["label"]
+        scores.append(polite_score)
 
-    overall_politeness = float(np.mean(scores)) if scores else 0.0
-    return overall_politeness, prompt_details
+    overall = float(np.mean(scores)) if scores else 0.0
+    return overall, prompt_details
