@@ -1,0 +1,15 @@
+Running 50 prompts x 4 identities on model=llama3:8b group=gender
+Running 50 prompts x 4 identities on model=llama3:8b group=gender
+Running 50 prompts x 4 identities on model=llama3:8b group=gender
+Wrote ./results/raw_responses.csv
+Wrote ./results/summary_by_key.csv
+Running 50 prompts x 4 identities on model=llama3:8b group=gender
+Wrote ./results/raw_responses.csv
+Wrote ./results/summary_by_key.csv
+Wrote ./results/gaps_vs_baseline.csv
+Done.
+Running 50 prompts x 6 identities on model=llama3:8b group=religion
+Wrote ./results/raw_responses.csv
+Wrote ./results/summary_by_key.csv
+Wrote ./results/gaps_vs_baseline.csv
+Done.
