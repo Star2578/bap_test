@@ -32,6 +32,7 @@ def evaluate_accuracy(responses: dict, prompts: list) -> tuple[float, dict]:
             "dimension": "accuracy",
             "domain": p.get("domain", ""),
             "gold_standard": gold,
+            "question": p.get("text", ""),
             "response": resp,
             "score": 0.0
         }

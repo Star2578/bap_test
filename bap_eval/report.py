@@ -17,13 +17,14 @@ def generate_report(responses: dict, prompts: list, scores: dict, detailed_resul
     domain_scores = defaultdict(lambda: {"bias": [], "accuracy": [], "politeness": []})
     for pid, detail in detailed_results.items():
         domain = detail["domain"]
-        for dim in ["bias", "accuracy", "politeness"]:
-            if detail.get(dim) is not None:
-                domain_scores[domain][dim].append(detail[dim])
+        dim = detail.get("dimension")
+        score = detail.get("score")
+        if dim in domain_scores[domain] and score is not None:
+            domain_scores[domain][dim].append(score)
 
     # Aggregate domain-level averages
     domain_summary = {
-        d: {dim: float(np.mean(vals)) if vals else None
+        d: {dim: (float(np.mean(vals)) if vals else None)
             for dim, vals in dims.items()}
         for d, dims in domain_scores.items()
     }

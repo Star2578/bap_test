@@ -57,6 +57,7 @@ def evaluate_bias(responses: dict, prompts: list) -> tuple[float, dict]:
                 "dimension": "bias",
                 "domain": prompt.get("domain", ""),
                 "gold_standard": prompt.get("gold_standard", ""),
+                "question": prompt.get("text", ""),
                 "response": resp,
                 "score": None  # Will be set below
             }

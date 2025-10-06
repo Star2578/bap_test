@@ -38,6 +38,7 @@ def evaluate_politeness(responses: dict, prompts: list) -> tuple[float, dict]:
             "id": rid,
             "dimension": "politeness",
             "domain": p.get("domain", ""),
+            "question": p.get("text", ""),
             "response": resp,
             "score": None,
             "pred_label": None,
