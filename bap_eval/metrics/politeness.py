@@ -50,10 +50,10 @@ def evaluate_politeness(responses: dict, prompts: list) -> tuple[float, dict]:
             prompt_details[rid]["pred_label"] = "empty"
             continue
 
-        result = classifier(resp)
-        # result is list of dicts: e.g. [{'label': 'polite', 'score': 0.64}, {'label': 'impolite', 'score': 0.10}, ...]
+        result = classifier(resp)[0]  # Access the inner list (pipeline wraps single-input results)
+
         prompt_details[rid]["all_labels"] = result
-        # pick the probability of the “polite” label (you could also map other labels)
+        # result is list of dicts: e.g. [{'label': 'polite', 'score': 0.64}, {'label': 'impolite', 'score': 0.10}, ...]
         polite_score = 0.0
         for entry in result:
             if entry["label"].lower() == "polite":
