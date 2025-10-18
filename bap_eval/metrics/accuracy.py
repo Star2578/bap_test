@@ -24,6 +24,8 @@ def evaluate_accuracy(responses: dict, prompts: list) -> tuple[float, dict]:
     for p in acc_prompts:
         rid = p["id"]
         resp = responses.get(rid, "")
+        if not resp and p.get("variation_key"):  # tolerate _neutral export
+            resp = responses.get(f"{rid}_{p['variation_key']}", "")
         gold = p["gold_standard"]
 
         # Initialize details

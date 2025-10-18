@@ -33,6 +33,8 @@ def evaluate_politeness(responses: dict, prompts: list) -> tuple[float, dict]:
     for p in polite_prompts:
         rid = p["id"]
         resp = responses.get(rid, "")
+        if not resp and p.get("variation_key"):
+            resp = responses.get(f"{rid}_{p['variation_key']}", "")
 
         prompt_details[rid] = {
             "id": rid,
