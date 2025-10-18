@@ -69,7 +69,6 @@ def generate_report(
                 "variation_key",
                 "domain",
                 "score",
-                "score_color",
             ],
         )
         writer.writeheader()
